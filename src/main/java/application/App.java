@@ -7,6 +7,7 @@ import net.coobird.thumbnailator.resizers.DefaultResizerFactory;
 import net.coobird.thumbnailator.resizers.Resizer;
 import network.NeuralNetwork;
 import network.NeuralNetworkBuilder;
+import network.NeuralNetworkController;
 import network.activationfunction.FastSigmoid;
 import network.activationfunction.RyanSigmoid;
 import network.activationfunction.Sigmoid;
@@ -18,6 +19,7 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import javax.imageio.ImageIO;
+import javax.xml.bind.JAXBException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -49,7 +51,7 @@ public class App {
 	public final static Random rnd = new Random();
 	public final static DecimalFormat df1 = new DecimalFormat("0.0");
 
-	public static void main(String... args) throws IOException, ParserConfigurationException, SAXException {
+	public static void main(String... args) throws IOException, ParserConfigurationException, SAXException, JAXBException {
 		File[] trainingFiles = loadTrainingFiles().toArray(new File[0]);
 		NeuralNetwork finder = NeuralNetworkBuilder.build().inputLayer(IMAGE_WIDTH * IMAGE_HEIGHT).hiddenLayer(35, new RyanSigmoid())
 				.hiddenLayer(35, new RyanSigmoid()).outputLayer(4, new RyanSigmoid()).getNeuralNetwork();
@@ -69,7 +71,7 @@ public class App {
 				(int) mapNumber(finder.getOutputLayer().getNeurons()[3].fire(), 0, 1, 0, testImage.getHeight()), Color.RED);
 
 		ImageIO.write(image, "png", new File("beforeTraining.png"));
-		int epochs = 1000;
+		int epochs = 10000;
 		Vector2D[] vectors = new Vector2D[epochs];
 
 		double loss = 0;
@@ -77,7 +79,7 @@ public class App {
 			File trainFile = trainingFiles[0];
 			double[] targets = extractImage(trainFile).getMappedBndBox();
 			setupInputs(finder, scaleImage(ImageIO.read(trainFile)));
-			finder.train(targets, 0.5);
+			NeuralNetworkController.train(finder, targets, 0.5);
 
 			if (i % (epochs / 100) == 0) {
 				loss = calculateLoss(finder, targets);
@@ -99,9 +101,7 @@ public class App {
 				(int) mapNumber(finder.getOutputLayer().getNeurons()[3].fire(), 0, 1, 0, testImage.getHeight()), Color.RED);
 
 		ImageIO.write(image, "png", new File("afterTraining.png"));
-		System.out.println("\n");
-
-		System.out.println("test");
+		NeuralNetworkController.saveNetwork(finder, "trainedNetwork.xml");
 	}
 
 	public static BufferedImage drawGraph(Vector2D[] vectors) throws IOException {
